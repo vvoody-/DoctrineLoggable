@@ -1,0 +1,27 @@
+{
+	"name": "adt/doctrine-loggable",
+	"type": "library",
+	"description": "Logging of changes in Doctrine entities",
+	"keywords": ["logging", "doctrine2"],
+	"homepage": "https://github.com/AppsDevTeam/DoctrineLoggable",
+	"license": ["BSD-3-Clause", "GPL-2.0", "GPL-3.0"],
+	"authors": [
+		{
+			"name": "Apps Dev Team",
+			"homepage": "http://appsdevteam.com",
+			"email": "hello@appsdevteam.com"
+		}
+	],
+	"support": {
+		"email": "hello@appsdevteam.com",
+		"issues": "https://github.com/AppsDevTeam/DoctrineLoggable/issues"
+	},
+	"require": {
+	},
+	"autoload": {
+		"psr-4": {
+			"Adt\\DoctrineLoggable\\": "src/"
+		},
+		"classmap": ["src/exceptions.php"]
+	}
+}
