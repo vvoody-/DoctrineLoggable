@@ -346,8 +346,8 @@ class ChangeSetFactory
 			$logEntry->setObjectId($logEntry->getChangeSet()->getIdentification()->getId());
 			$logEntry->setAction($logEntry->getChangeSet()->getAction());
 			$this->em->persist($logEntry);
+			$this->em->flush($logEntry);
 		}
-		$this->em->flush();
 	}
 
 	protected function getLogEntry($entity)
