@@ -2,7 +2,7 @@
 
 namespace Adt\DoctrineLoggable\ChangeSet;
 
-class ToOne extends PropertyChangeset
+class ToOne extends PropertyChangeSet
 {
 
 	/** @var Id|NULL old identification */
