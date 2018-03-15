@@ -80,4 +80,12 @@ class ToOne extends PropertyChangeSet
 	{
 		return ['o', 'n', 'ch'];
 	}
+
+	/**
+	 * @return Id|NULL
+	 */
+	public function getOld()
+	{
+		return $this->o;
+	}
 }

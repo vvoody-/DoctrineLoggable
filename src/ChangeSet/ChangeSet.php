@@ -80,4 +80,12 @@ class ChangeSet
 		}
 	}
 
+	/**
+	 * @return PropertyChangeSet[]
+	 */
+	public function getChangedProperties()
+	{
+		return $this->p;
+	}
+
 }
