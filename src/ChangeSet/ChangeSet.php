@@ -23,7 +23,7 @@ class ChangeSet
 	 */
 	public function addPropertyChange(PropertyChangeSet $property)
 	{
-		if ($property->isChanged() || $this->a === self::ACTION_CREATE) {
+		if ($property->isChanged()) {
 			if (isset($this->p[$property->getName()])) {
 				$oldNodeProperty = $this->p[$property->getName()];
 				$oldNodeProperty->merge($property);
