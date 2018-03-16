@@ -25,7 +25,7 @@ class Scalar extends PropertyChangeSet
 	 */
 	public function isChanged()
 	{
-		return $this->o !== $this->n;
+		return $this->o != $this->n;
 	}
 
 	/**
