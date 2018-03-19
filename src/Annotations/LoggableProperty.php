@@ -15,4 +15,7 @@ class LoggableProperty
 	/** @var bool */
 	public $logFile = FALSE;
 
+	/** @var string */
+	public $label = NULL;
+
 }

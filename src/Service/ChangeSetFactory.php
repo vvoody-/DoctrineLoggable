@@ -294,7 +294,24 @@ class ChangeSetFactory
 			$identificationData = [];
 			if ($identificationAnnotation) {
 				foreach ($identificationAnnotation->fields as $fieldName) {
-					$identificationData[$fieldName] = $entity->{$fieldName};
+					$fieldNameParts = explode('.', $fieldName);
+					$values = [$entity];
+					$newValues = [];
+					foreach ($fieldNameParts as $fieldNamePart) {
+						foreach ($values as $value) {
+							
+							if (is_array($value->{$fieldNamePart}) || $value->{$fieldNamePart} instanceof \Traversable) {
+								foreach ($value->{$fieldNamePart} as $item) {
+									$newValues[] = $item;
+								}
+							} else {
+								$newValues[] = $value->{$fieldNamePart};
+							}
+						}
+						$values = $newValues;
+						$newValues = [];
+					}
+					$identificationData[$fieldName] = implode(', ', $values);
 				}
 			}
 			$id = $entity->{$metadata->getSingleIdentifierColumnName()};
