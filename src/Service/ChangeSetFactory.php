@@ -6,6 +6,7 @@ use Adt\DoctrineLoggable\ChangeSet AS CS;
 use Adt\DoctrineLoggable\Annotations AS DLA;
 use Adt\DoctrineLoggable\Entity\LogEntry;
 use Doctrine\Common\Annotations\Reader;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\Common\Util\ClassUtils;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\Mapping\Column;
@@ -191,6 +192,10 @@ class ChangeSetFactory
 		 * treba si asi pres reflection vytiahnut realnu hodnotu property (PersistentCollection)
 		 */
 		$collection = $entity->{$property->name};
+		
+		if (!$collection instanceof Collection) {
+			return $nodeCollection;
+		}
 
 		foreach ($collection->getDeleteDiff() as $relatedEntity) {
 			$nodeCollection->addRemoved($this->createIdentification($relatedEntity));
@@ -203,7 +208,7 @@ class ChangeSetFactory
 		/** @var DLA\LoggableProperty $loggablePropertyAnnotation */
 		$loggablePropertyAnnotation = $this->reader->getPropertyAnnotation($property, DLA\LoggableProperty::class);
 		if ($loggablePropertyAnnotation->logEntity) {
-			foreach ($entity->{$property->name} as $relatedEntity) {
+			foreach ($collection as $relatedEntity) {
 				$nodeCollection->addChangeSet($this->getChangeSet($relatedEntity));
 			}
 		}
