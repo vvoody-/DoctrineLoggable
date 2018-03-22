@@ -319,7 +319,7 @@ class ChangeSetFactory
 					$identificationData[$fieldName] = implode(', ', $values);
 				}
 			}
-			$id = $entity->{$metadata->getSingleIdentifierColumnName()};
+			$id = $entity->{$metadata->getSingleIdentifierFieldName()};
 			$identification = new CS\Id($id, $class, $identificationData);
 
 			$this->identifications[$entityHash] = $identification;
