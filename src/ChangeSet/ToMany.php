@@ -27,7 +27,9 @@ class ToMany extends PropertyChangeSet
 	public function addChangeSet(ChangeSet $changeSet = NULL)
 	{
 		if ($changeSet !== NULL && $changeSet->isChanged()) {
-			$this->ch[$changeSet->getIdentification()->getId()] = $changeSet;
+			if (($k = array_search($changeSet, $this->ch)) === FALSE) {
+				$this->ch[] = $changeSet;
+			}
 		}
 	}
 
@@ -38,10 +40,10 @@ class ToMany extends PropertyChangeSet
 	 */
 	public function addAdded(Id $identification)
 	{
-		if (isset($this->r[$identification->getId()])) {
-			unset($this->r[$identification->getId()]);
+		if (($k = array_search($identification, $this->r)) !== FALSE) {
+			unset($this->r[$k]);
 		} else {
-			$this->a[$identification->getId()] = $identification;
+			$this->a[] = $identification;
 		}
 	}
 
@@ -52,10 +54,10 @@ class ToMany extends PropertyChangeSet
 	 */
 	public function addRemoved(Id $identification)
 	{
-		if (isset($this->a[$identification->getId()])) {
-		    unset($this->a[$identification->getId()]);
+		if (($k = array_search($identification, $this->a)) !== FALSE) {
+			unset($this->a[$k]);
 		} else {
-			$this->r[$identification->getId()] = $identification;
+			$this->r[] = $identification;
 		}
 	}
 
@@ -70,9 +72,9 @@ class ToMany extends PropertyChangeSet
 		foreach ($toMany->getRemoved() as $identification) {
 			$this->addRemoved($identification);
 		}
-		foreach ($this->ch as $nodeEntity) {
+		foreach ($this->ch as $k => $nodeEntity) {
 			if (!$nodeEntity->isChanged()) {
-			    unset($this->ch[$nodeEntity->getIdentification()->getId()]);
+			    unset($this->ch[$k]);
 			}
 		}
 		foreach ($toMany->getChangeSets() as $nodeEntity) {

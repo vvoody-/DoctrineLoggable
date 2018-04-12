@@ -96,13 +96,13 @@ class ChangeSetFactory
 			$metadata = $this->em->getClassMetadata(ClassUtils::getClass($entity));
 			$id = $entity->{$metadata->getSingleIdentifierColumnName()};
 
-			/** @var Id $identification */
+			/** @var CS\Id $identification */
 			$identification = $this->identifications[$oid];
 			$identification->setId($id);
 		}
 	}
 
-	/**
+	/** 
 	 * @param $entity
 	 * @return CS\ChangeSet
 	 */
