@@ -307,10 +307,10 @@ class ChangeSetFactory
 							
 							if (is_array($value->{$fieldNamePart}) || $value->{$fieldNamePart} instanceof \Traversable) {
 								foreach ($value->{$fieldNamePart} as $item) {
-									$newValues[] = $item;
+									$newValues[] = $this->convertIdentificationValue($item);
 								}
 							} else {
-								$newValues[] = $value->{$fieldNamePart};
+								$newValues[] = $this->convertIdentificationValue($value->{$fieldNamePart});
 							}
 						}
 						$values = $newValues;
@@ -325,6 +325,18 @@ class ChangeSetFactory
 			$this->identifications[$entityHash] = $identification;
 		}
 		return $this->identifications[$entityHash];
+	}
+	
+	protected function convertIdentificationValue($value)
+	{
+		if ($value instanceof \DateTime) {
+		    if ($value->format('H:i:s') == '00:00:00') {
+		        $value = $value->format('j.n.Y');
+		    } else {
+		        $value = $value->format('j.n.Y H:i');
+			}
+		}
+		return $value;
 	}
 
 	/**
