@@ -4,7 +4,6 @@ namespace Adt\DoctrineLoggable\Entity;
 
 use Adt\DoctrineLoggable\ChangeSet\ChangeSet;
 use Doctrine\ORM\Mapping as ORM;
-use Nette\Object;
 
 /**
  * @ORM\Entity()
@@ -12,7 +11,7 @@ use Nette\Object;
  * 	indexes={@ORM\Index(name="log_entity_lookup_idx", columns={"object_id", "object_class"})}
  * )
  */
-class LogEntry extends Object
+class LogEntry
 {
 	
 	/**
