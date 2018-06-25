@@ -187,12 +187,10 @@ class ChangeSetFactory
 	{
 		$nodeCollection = new CS\ToMany($property->name);
 
-		/** @var PersistentCollection $collection
-		 * TODO pozor kdyby MagicAccessors konvertuje persistent colection na ReadOnlyCollectionWrapper
-		 * treba si asi pres reflection vytiahnut realnu hodnotu property (PersistentCollection)
-		 */
-		$collection = $entity->{$property->name};
-		
+		/** @var PersistentCollection $collection */
+		$property->setAccessible(TRUE);
+		$collection = $property->getValue($entity);
+
 		if (!$collection instanceof Collection) {
 			return $nodeCollection;
 		}
