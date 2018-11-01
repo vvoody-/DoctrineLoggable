@@ -102,7 +102,7 @@ class ChangeSetFactory
 		}
 	}
 
-	/** 
+	/**
 	 * @param $entity
 	 * @return CS\ChangeSet
 	 */
@@ -191,15 +191,21 @@ class ChangeSetFactory
 		$property->setAccessible(TRUE);
 		$collection = $property->getValue($entity);
 
-		if (!$collection instanceof Collection) {
+		if ($collection instanceof PersistentCollection) {
+			$removed = $collection->getDeleteDiff();
+			$added = $collection->getInsertDiff();
+		} elseif ($collection instanceof Collection) {
+			$removed = [];
+			$added = $collection->toArray();
+		} else {
 			return $nodeCollection;
 		}
 
-		foreach ($collection->getDeleteDiff() as $relatedEntity) {
+		foreach ($removed as $relatedEntity) {
 			$nodeCollection->addRemoved($this->createIdentification($relatedEntity));
 		}
 
-		foreach ($collection->getInsertDiff() as $relatedEntity) {
+		foreach ($added as $relatedEntity) {
 			$nodeCollection->addAdded($this->createIdentification($relatedEntity));
 		}
 
@@ -302,7 +308,7 @@ class ChangeSetFactory
 					$newValues = [];
 					foreach ($fieldNameParts as $fieldNamePart) {
 						foreach ($values as $value) {
-							
+
 							if (is_array($value->{$fieldNamePart}) || $value->{$fieldNamePart} instanceof \Traversable) {
 								foreach ($value->{$fieldNamePart} as $item) {
 									$newValues[] = $this->convertIdentificationValue($item);
@@ -324,7 +330,7 @@ class ChangeSetFactory
 		}
 		return $this->identifications[$entityHash];
 	}
-	
+
 	protected function convertIdentificationValue($value)
 	{
 		if ($value instanceof \DateTime) {
