@@ -394,7 +394,7 @@ class ChangeSetFactory
 		if (isset($this->logEntries[$soh])) {
 			return $this->logEntries[$soh];
 		}
-		$entityClassName = get_class($entity);
+		$entityClassName = $this->em->getClassMetadata(get_class($entity))->name;
 
 		$logEntryClass = $this->getLogEntryClass();
 		/** @var LogEntry $logEntry */
