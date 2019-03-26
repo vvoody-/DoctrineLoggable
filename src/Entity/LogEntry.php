@@ -43,14 +43,14 @@ class LogEntry
 	/**
 	 * @var string $objectId
 	 *
-	 * @ORM\Column(type="integer", nullable=true)
+	 * @ORM\Column(type="integer", name="object_id", nullable=true)
 	 */
 	protected $objectId;
 
 	/**
 	 * @var string $objectClass
 	 *
-	 * @ORM\Column(type="string")
+	 * @ORM\Column(type="string", name="object_class")
 	 */
 	protected $objectClass;
 
