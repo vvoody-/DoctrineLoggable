@@ -42,7 +42,7 @@ class ToMany extends PropertyChangeSet
 	{
 		if (($k = array_search($identification, $this->r)) !== FALSE) {
 			unset($this->r[$k]);
-		} else {
+		} elseif (array_search($identification, $this->a) === FALSE) {
 			$this->a[] = $identification;
 		}
 	}
@@ -56,7 +56,7 @@ class ToMany extends PropertyChangeSet
 	{
 		if (($k = array_search($identification, $this->a)) !== FALSE) {
 			unset($this->a[$k]);
-		} else {
+		} elseif (array_search($identification, $this->r) === FALSE) {
 			$this->r[] = $identification;
 		}
 	}
