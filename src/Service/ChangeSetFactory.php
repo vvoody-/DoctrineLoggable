@@ -94,11 +94,11 @@ class ChangeSetFactory
 		if (array_key_exists($oid, $this->identifications)) {
 
 			$metadata = $this->em->getClassMetadata(ClassUtils::getClass($entity));
-			$id = $entity->{$metadata->getSingleIdentifierColumnName()};
+			$id = $metadata->getIdentifierValues($entity);
 
 			/** @var CS\Id $identification */
 			$identification = $this->identifications[$oid];
-			$identification->setId($id);
+			$identification->setId(implode('-', $id));
 		}
 	}
 
@@ -308,13 +308,13 @@ class ChangeSetFactory
 					$newValues = [];
 					foreach ($fieldNameParts as $fieldNamePart) {
 						foreach ($values as $value) {
-
-							if (is_array($value->{$fieldNamePart}) || $value->{$fieldNamePart} instanceof \Traversable) {
-								foreach ($value->{$fieldNamePart} as $item) {
+							$fieldValue = $metadata->getFieldValue($value, $fieldNamePart);
+							if (is_array($fieldValue) || $fieldValue instanceof \Traversable) {
+								foreach ($fieldValue as $item) {
 									$newValues[] = $this->convertIdentificationValue($item);
 								}
 							} else {
-								$newValues[] = $this->convertIdentificationValue($value->{$fieldNamePart});
+								$newValues[] = $this->convertIdentificationValue($fieldValue);
 							}
 						}
 						$values = $newValues;
@@ -323,8 +323,8 @@ class ChangeSetFactory
 					$identificationData[$fieldName] = implode(', ', $values);
 				}
 			}
-			$id = $entity->{$metadata->getSingleIdentifierFieldName()};
-			$identification = new CS\Id($id, $class, $identificationData);
+			$id = $metadata->getIdentifierValues($entity);
+			$identification = new CS\Id(implode('-', $id), $class, $identificationData);
 
 			$this->identifications[$entityHash] = $identification;
 		}
@@ -334,10 +334,10 @@ class ChangeSetFactory
 	protected function convertIdentificationValue($value)
 	{
 		if ($value instanceof \DateTime) {
-		    if ($value->format('H:i:s') == '00:00:00') {
-		        $value = $value->format('j.n.Y');
-		    } else {
-		        $value = $value->format('j.n.Y H:i');
+			if ($value->format('H:i:s') == '00:00:00') {
+				$value = $value->format('j.n.Y');
+			} else {
+				$value = $value->format('j.n.Y H:i');
 			}
 		}
 		return $value;
@@ -394,7 +394,8 @@ class ChangeSetFactory
 		if (isset($this->logEntries[$soh])) {
 			return $this->logEntries[$soh];
 		}
-		$entityClassName = $this->em->getClassMetadata(get_class($entity))->name;
+		$metadata = $this->em->getClassMetadata(get_class($entity));
+		$entityClassName = $metadata->name;
 
 		$logEntryClass = $this->getLogEntryClass();
 		/** @var LogEntry $logEntry */
@@ -404,7 +405,12 @@ class ChangeSetFactory
 		}
 		$logEntry->setLoggedNow();
 		$logEntry->setObjectClass($entityClassName);
-		$logEntry->setObjectId($entity->id);
+
+		$pkField = $metadata->getSingleIdentifierFieldName();
+
+		$pk = $metadata->getIdentifierValues($entity);
+		$logEntry->setObjectId(implode('-', $pk));
+
 		return $logEntry;
 	}
 
