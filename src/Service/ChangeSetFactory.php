@@ -234,7 +234,8 @@ class ChangeSetFactory
 		/** @var OneToOne $oneToOneAnnotation */
 		$oneToOneAnnotation = $this->reader->getPropertyAnnotation($property, OneToOne::class);
 
-		$newIdentification = $oldIdentification = $this->createIdentification($entity->{$property->name});
+		$relatedEntity = $this->em->getClassMetadata(ClassUtils::getClass($entity))->getFieldValue($entity, $property->name);
+		$newIdentification = $oldIdentification = $this->createIdentification($relatedEntity);
 
 		// owning side (ManyToOne is always owning side, OneToOne only if inversedBy is set (or nothing set - unidirectional)
 		if ($manyToOneAnnotation || ($oneToOneAnnotation && $oneToOneAnnotation->mappedBy === NULL)) {
@@ -278,7 +279,7 @@ class ChangeSetFactory
 		$toOne = new CS\ToOne($property->name, $oldIdentification, $newIdentification);
 
 		if ($loggedPropertyAnnotation->logEntity) {
-			$toOne->setChangeSet($this->getChangeSet($entity->{$property->name}));
+			$toOne->setChangeSet($this->getChangeSet($relatedEntity));
 		}
 
 		return $toOne;
@@ -308,7 +309,8 @@ class ChangeSetFactory
 					$newValues = [];
 					foreach ($fieldNameParts as $fieldNamePart) {
 						foreach ($values as $value) {
-							$fieldValue = $metadata->getFieldValue($value, $fieldNamePart);
+							$fieldValue = $this->em->getClassMetadata(ClassUtils::getClass($value))
+								->getFieldValue($value, $fieldNamePart);
 							if (is_array($fieldValue) || $fieldValue instanceof \Traversable) {
 								foreach ($fieldValue as $item) {
 									$newValues[] = $this->convertIdentificationValue($item);
