@@ -309,6 +309,11 @@ class ChangeSetFactory
 					$newValues = [];
 					foreach ($fieldNameParts as $fieldNamePart) {
 						foreach ($values as $value) {
+							if (is_object($value) && $value instanceof \Doctrine\Persistence\Proxy) {
+								if (!$value->__isInitialized()) {
+									$value->__load();
+								}
+							}
 							$fieldValue = $this->em->getClassMetadata(ClassUtils::getClass($value))
 								->getFieldValue($value, $fieldNamePart);
 							if (is_array($fieldValue) || $fieldValue instanceof \Traversable) {
