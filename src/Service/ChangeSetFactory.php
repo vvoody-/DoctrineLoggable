@@ -7,6 +7,7 @@ use Adt\DoctrineLoggable\Annotations AS DLA;
 use Adt\DoctrineLoggable\Entity\LogEntry;
 use Doctrine\Common\Annotations\Reader;
 use Doctrine\Common\Collections\Collection;
+use Doctrine\Common\EventManager;
 use Doctrine\Common\Util\ClassUtils;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\Mapping\Column;
@@ -59,6 +60,9 @@ class ChangeSetFactory
 
 	/** @var UserIdProvider */
 	private $userIdProvider;
+
+	/** @var boolean */
+	protected $afterShutdown = FALSE;
 
 	public function __construct(Reader $reader, UserIdProvider $userIdProvider)
 	{
@@ -384,6 +388,7 @@ class ChangeSetFactory
 
 	public function shutdownFlush()
 	{
+		$this->afterShutdown = TRUE;
 		if (!isset($this->em) || count($this->logEntries) === 0) {
 			return;
 		}
@@ -444,6 +449,14 @@ class ChangeSetFactory
 	{
 		$this->em = $em;
 		$this->uow = $this->em->getUnitOfWork();
+	}
+
+	/**
+	 * @return bool
+	 */
+	public function isAfterShutdown()
+	{
+		return $this->afterShutdown;
 	}
 
 }
