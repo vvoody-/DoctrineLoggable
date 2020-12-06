@@ -5,7 +5,6 @@ namespace Adt\DoctrineLoggable\Listener;
 use Adt\DoctrineLoggable\Service\ChangeSetFactory;
 use Doctrine\Common\EventSubscriber;
 use Doctrine\Common\Util\ClassUtils;
-use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\Event\LifecycleEventArgs;
 use Doctrine\ORM\Event\OnFlushEventArgs;
 
