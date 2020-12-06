@@ -35,32 +35,14 @@ class LoggableListener implements EventSubscriber
 		$this->changeSetFactory->setEntityManager($eventArgs->getEntityManager());
 		$uow = $eventArgs->getEntityManager()->getUnitOfWork();
 
-//		foreach ($this->uow->getScheduledEntityUpdates() as $entity) {
-//			$this->scheduledEntities[spl_object_hash($entity)] = ChangeSet::ACTION_EDIT;
-//		}
-//		foreach ($this->uow->getScheduledEntityInsertions() as $entity) {
-//			$this->scheduledEntities[spl_object_hash($entity)] = ChangeSet::ACTION_CREATE;
-//		}
-//		foreach ($this->uow->getScheduledEntityDeletions() as $entity) {
-//			$this->scheduledEntities[spl_object_hash($entity)] = ChangeSet::ACTION_DELETE;
-//		}
-
-
-		foreach ($uow->getIdentityMap() as $entityClass => $entityList) {
-			if (!$this->changeSetFactory->isEntityLogged($entityClass)) {
-				continue;
-			}
-			foreach ($entityList as $entity) {
+		foreach (['getScheduledEntityInsertions', 'getScheduledEntityDeletions', 'getScheduledEntityUpdates'] as $method) {
+			foreach (call_user_func([$uow, $method]) as $entity) {
+				$entityClass = ClassUtils::getClass($entity);
+				if (!$this->changeSetFactory->isEntityLogged($entityClass)) {
+					continue;
+				}
 				$this->changeSetFactory->processLoggedEntity($entity);
 			}
-		}
-
-		foreach ($uow->getScheduledEntityInsertions() as $entity) {
-			$entityClass = ClassUtils::getClass($entity);
-			if (!$this->changeSetFactory->isEntityLogged($entityClass)) {
-				continue;
-			}
-			$this->changeSetFactory->processLoggedEntity($entity);
 		}
 	}
 
