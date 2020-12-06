@@ -10,6 +10,7 @@ use Doctrine\Common\Collections\Collection;
 use Doctrine\Common\EventManager;
 use Doctrine\Common\Util\ClassUtils;
 use Doctrine\ORM\EntityManager;
+use Doctrine\ORM\Mapping\ClassMetadataInfo;
 use Doctrine\ORM\Mapping\Column;
 use Doctrine\ORM\Mapping\ManyToMany;
 use Doctrine\ORM\Mapping\ManyToOne;
@@ -64,10 +65,75 @@ class ChangeSetFactory
 	/** @var boolean */
 	protected $afterShutdown = FALSE;
 
+	protected $associationStructure = [];
+
 	public function __construct(Reader $reader, UserIdProvider $userIdProvider)
 	{
 		$this->reader = $reader;
 		$this->userIdProvider = $userIdProvider;
+	}
+
+	public function getLoggableEntityAssociationStructure(&$structure = [], $nestedClass = null)
+	{
+		if ($this->associationStructure) {
+			return $this->associationStructure;
+		}
+
+		$metadataFactory = $this->em->getMetadataFactory();
+		$classes = $nestedClass ? [$metadataFactory->getMetadataFor($nestedClass)] : $metadataFactory->getAllMetadata();
+		foreach ($classes as $classMetadata) {
+			// zajimaji nas jen entity s anotaci LoggableEntity
+			if (!$nestedClass && !$this->isEntityLogged($classMetadata->getName())) {
+				continue;
+			}
+
+			foreach ($this->getLoggedProperties($classMetadata->getName()) as $property) {
+				if ($classMetadata->hasAssociation($property->getName())) {
+					$associationMapping = $classMetadata->getAssociationMapping($property->getName());
+					if ($associationMapping['type'] === ClassMetadataInfo::ONE_TO_ONE) {
+						if (empty($associationMapping['inversedBy'])) {
+							throw new \Exception('The "inversedBy" annotation property is missing for loggable property "' . $classMetadata->getName() . '::$' . $property->getName() . '"');
+						}
+						$structure[$associationMapping['targetEntity']][] = $nestedClass ? [$associationMapping['inversedBy'], end($structure[$nestedClass])] : [$associationMapping['inversedBy']];
+					}
+					elseif ($associationMapping['type'] === ClassMetadataInfo::ONE_TO_MANY) {
+						if (empty($associationMapping['mappedBy'])) {
+							throw new \Exception('The "mappedBy" annotation property is missing for loggable property "' . $classMetadata->getName() . '::$' . $property->getName() . '"');
+						}
+						$structure[$associationMapping['targetEntity']][] = $nestedClass ? [$associationMapping['mappedBy'], end($structure[$nestedClass])] : [$associationMapping['mappedBy']];
+
+						/** @var DLA\LoggableProperty $loggablePropertyAnnotation */
+						$loggablePropertyAnnotation = $this->reader->getPropertyAnnotation($property, DLA\LoggableProperty::class);
+						if ($loggablePropertyAnnotation->logEntity) {
+							$this->getLoggableEntityAssociationStructure($structure, $associationMapping['targetEntity']);
+						}
+					}
+				}
+			}
+		}
+
+		if (!$nestedClass) {
+			return $this->associationStructure = $structure;
+		}
+	}
+
+	public function getLoggableEntityFromAssosicationStructure($associationEntity)
+	{
+		$associationEntityClassName = ClassUtils::getClass($associationEntity);
+		foreach($this->associationStructure[$associationEntityClassName] as $propertyStructure) {
+			foreach ($propertyStructure as $propertyName) {
+				$property = new \ReflectionProperty($associationEntityClassName, $propertyName);
+				$property->setAccessible(true);
+				$value = $property->getValue($associationEntity);
+
+				// vylezli jsme o uroven vys, je potreba nastavit aktualni tridu, ve ktere se nachazime
+				$associationEntityClassName = get_class($value);
+				$associationEntity = $value;
+			}
+			return $value;
+		}
+
+		return null;
 	}
 
 	public function isEntityLogged($entityClass)
@@ -83,11 +149,12 @@ class ChangeSetFactory
 	public function processLoggedEntity($entity)
 	{
 		$logEntry = $this->getLogEntry($entity);
-		$changeSet = $this->getChangeSet($entity);
 
+		$changeSet = $this->getChangeSet($entity);
 		if (!$changeSet->isChanged()) {
 			return;
 		}
+
 		$this->logEntries[spl_object_hash($entity)] = $logEntry;
 		$logEntry->setChangeset($changeSet);
 	}
