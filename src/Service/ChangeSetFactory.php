@@ -73,48 +73,74 @@ class ChangeSetFactory
 		$this->userIdProvider = $userIdProvider;
 	}
 
-	public function getLoggableEntityAssociationStructure(&$structure = [], $nestedClass = null)
+	// vystvori napriklad nasledujici strukturu
+	//$structure = [
+	//	'Entity\UserAgreement' => [
+	//		[
+	//			'user'
+	//		]
+	//	],
+	//	'Entity\File' => [
+	//		[
+	//			'userAgreementDocument',
+	//			'user'
+	//		],
+	//		[
+	//			'branchPhoto'
+	//		]
+	//	]
+	//];
+	// jedna se o cestu od entity, na ktere se udala zmena, k materske entite, u ktere je anotace loggableEntity
+	public function getLoggableEntityAssociationStructure($className = null, $path = [])
 	{
 		if ($this->associationStructure) {
 			return $this->associationStructure;
 		}
 
+		$structure = [];
 		$metadataFactory = $this->em->getMetadataFactory();
-		$classes = $nestedClass ? [$metadataFactory->getMetadataFor($nestedClass)] : $metadataFactory->getAllMetadata();
+		$classes = $className ? [$metadataFactory->getMetadataFor($className)] : $metadataFactory->getAllMetadata();
 		foreach ($classes as $classMetadata) {
-			// zajimaji nas jen entity s anotaci LoggableEntity
-			if (!$nestedClass && !$this->isEntityLogged($classMetadata->getName())) {
+			// pokud nejsme zanoreni, tak nas zajimaji jen entity s anotaci LoggableEntity
+			if (!$className && !$this->isEntityLogged($classMetadata->getName())) {
 				continue;
 			}
 
 			foreach ($this->getLoggedProperties($classMetadata->getName()) as $property) {
-				if ($classMetadata->hasAssociation($property->getName())) {
-					$associationMapping = $classMetadata->getAssociationMapping($property->getName());
-					if ($associationMapping['type'] === ClassMetadataInfo::ONE_TO_ONE) {
-						if (empty($associationMapping['inversedBy'])) {
-							throw new \Exception('The "inversedBy" annotation property is missing for loggable property "' . $classMetadata->getName() . '::$' . $property->getName() . '"');
-						}
-						$structure[$associationMapping['targetEntity']][] = $nestedClass ? [$associationMapping['inversedBy'], end($structure[$nestedClass])] : [$associationMapping['inversedBy']];
-					}
-					elseif ($associationMapping['type'] === ClassMetadataInfo::ONE_TO_MANY) {
-						if (empty($associationMapping['mappedBy'])) {
-							throw new \Exception('The "mappedBy" annotation property is missing for loggable property "' . $classMetadata->getName() . '::$' . $property->getName() . '"');
-						}
-						$structure[$associationMapping['targetEntity']][] = $nestedClass ? [$associationMapping['mappedBy'], end($structure[$nestedClass])] : [$associationMapping['mappedBy']];
+				// zajimaji nas jen asociace, nikoliv pole
+				if (!$classMetadata->hasAssociation($property->getName())) {
+					continue;
+				}
 
-						/** @var DLA\LoggableProperty $loggablePropertyAnnotation */
-						$loggablePropertyAnnotation = $this->reader->getPropertyAnnotation($property, DLA\LoggableProperty::class);
-						if ($loggablePropertyAnnotation->logEntity) {
-							$this->getLoggableEntityAssociationStructure($structure, $associationMapping['targetEntity']);
-						}
+				$associationMapping = $classMetadata->getAssociationMapping($property->getName());
+				$associationPropertyName = '';
+				if ($associationMapping['type'] === ClassMetadataInfo::ONE_TO_ONE) {
+					$associationPropertyName = 'inversedBy';
+				}
+				elseif ($associationMapping['type'] === ClassMetadataInfo::ONE_TO_MANY){
+					$associationPropertyName = 'mappedBy';
+				}
+				if ($associationPropertyName) {
+					if (empty($associationMapping[$associationPropertyName])) {
+						throw new \Exception('The "' . $associationPropertyName . '" annotation property is missing for loggable property "' . $classMetadata->getName() . '::$' . $property->getName() . '"');
+					}
+
+					$structure[$associationMapping['targetEntity']][] = $newPath = array_merge([$associationMapping[$associationPropertyName]], $path);
+
+					/** @var DLA\LoggableProperty $loggablePropertyAnnotation */
+					$loggablePropertyAnnotation = $this->reader->getPropertyAnnotation($property, DLA\LoggableProperty::class);
+					if ($loggablePropertyAnnotation->logEntity) {
+						$structure = array_merge_recursive($structure, $this->getLoggableEntityAssociationStructure($associationMapping['targetEntity'], $newPath));
 					}
 				}
 			}
 		}
 
-		if (!$nestedClass) {
-			return $this->associationStructure = $structure;
+		if ($className) {
+			return $structure;
 		}
+
+		return $this->associationStructure = $structure;
 	}
 
 	public function getLoggableEntityFromAssosicationStructure($associationEntity)
@@ -126,11 +152,19 @@ class ChangeSetFactory
 				$property->setAccessible(true);
 				$value = $property->getValue($associationEntity);
 
+				// pokud neni nastavena hodnota, vime ze jsme ve spatne ceste
+				if (!$value) {
+					continue 2;
+				}
+
 				// vylezli jsme o uroven vys, je potreba nastavit aktualni tridu, ve ktere se nachazime
 				$associationEntityClassName = get_class($value);
 				$associationEntity = $value;
 			}
-			return $value;
+
+			if ($value) {
+				return $value;
+			}
 		}
 
 		return null;
