@@ -397,9 +397,7 @@ class ChangeSetFactory
 		}
 		$entityHash = spl_object_hash($entity);
 		if (!isset($this->identifications[$entityHash])) {
-			bd($entity);
 			$class = ClassUtils::getClass($entity);
-			bd($class);
 			$metadata = $this->em->getClassMetadata($class);
 			/** @var DLA\LoggableIdentification $identificationAnnotation */
 			$identificationAnnotation = $this->reader->getClassAnnotation(new \ReflectionClass($class), DLA\LoggableIdentification::class);
