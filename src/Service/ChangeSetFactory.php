@@ -182,15 +182,11 @@ class ChangeSetFactory
 
 	public function processLoggedEntity($entity)
 	{
-		$logEntry = $this->getLogEntry($entity);
-
 		$changeSet = $this->getChangeSet($entity);
 		if (!$changeSet->isChanged()) {
 			return;
 		}
-
-		$this->logEntries[spl_object_hash($entity)] = $logEntry;
-		$logEntry->setChangeset($changeSet);
+		$this->getLogEntry($entity)->setChangeset($changeSet);
 	}
 
 	public function updateIdentification($entity)
@@ -288,7 +284,7 @@ class ChangeSetFactory
 	 * @param \ReflectionProperty $property
 	 * @return CS\ToMany
 	 */
-	protected function getCollectionChangeSet($entity, \ReflectionProperty $property)
+	public function getCollectionChangeSet($entity, \ReflectionProperty $property)
 	{
 		$nodeCollection = new CS\ToMany($property->name);
 
@@ -394,14 +390,13 @@ class ChangeSetFactory
 	 * @param object|NULL $entity
 	 * @return CS\Id|NULL
 	 */
-	protected function createIdentification($entity = NULL)
+	public function createIdentification($entity = NULL)
 	{
 		if ($entity === NULL) {
 			return NULL;
 		}
 		$entityHash = spl_object_hash($entity);
 		if (!isset($this->identifications[$entityHash])) {
-
 			$class = ClassUtils::getClass($entity);
 			$metadata = $this->em->getClassMetadata($class);
 			/** @var DLA\LoggableIdentification $identificationAnnotation */
@@ -501,7 +496,7 @@ class ChangeSetFactory
 		}
 	}
 
-	protected function getLogEntry($entity)
+	public function getLogEntry($entity)
 	{
 		$soh = spl_object_hash($entity);
 		if (isset($this->logEntries[$soh])) {
@@ -524,6 +519,7 @@ class ChangeSetFactory
 		$pk = $metadata->getIdentifierValues($entity);
 		$logEntry->setObjectId(implode('-', $pk));
 
+		$this->logEntries[spl_object_hash($entity)] = $logEntry;
 		return $logEntry;
 	}
 
@@ -544,12 +540,14 @@ class ChangeSetFactory
 	}
 
 	/**
-	 * @param EntityManager $em
+	 * @param $em
+	 * @return $this
 	 */
 	public function setEntityManager($em)
 	{
 		$this->em = $em;
 		$this->uow = $this->em->getUnitOfWork();
+		return $this;
 	}
 
 	/**

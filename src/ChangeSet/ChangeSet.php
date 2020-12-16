@@ -20,6 +20,7 @@ class ChangeSet
 
 	/**
 	 * @param PropertyChangeSet $property
+	 * @return $this
 	 */
 	public function addPropertyChange(PropertyChangeSet $property)
 	{
@@ -31,6 +32,7 @@ class ChangeSet
 				$this->p[$property->getName()] = $property;
 			}
 		}
+		return $this;
 	}
 
 	/**
@@ -50,11 +52,13 @@ class ChangeSet
 	}
 
 	/**
-	 * @param Id $identification
+	 * @param $identification
+	 * @return $this
 	 */
 	public function setIdentification($identification)
 	{
 		$this->i = $identification;
+		return $this;
 	}
 
 	/**
@@ -66,11 +70,13 @@ class ChangeSet
 	}
 
 	/**
-	 * @param string $action
+	 * @param $action
+	 * @return $this
 	 */
 	public function setAction($action)
 	{
 		$this->a = $action;
+		return $this;
 	}
 
 	function __wakeup()
