@@ -10,7 +10,6 @@ use Doctrine\ORM\Event\OnFlushEventArgs;
 
 class LoggableListener implements EventSubscriber
 {
-
 	/** @var ChangeSetFactory */
 	private $changeSetFactory;
 
@@ -32,35 +31,30 @@ class LoggableListener implements EventSubscriber
 		if ($this->changeSetFactory->isAfterShutdown()) {
 			return;
 		}
+
 		$this->changeSetFactory->setEntityManager($eventArgs->getEntityManager());
+
+		// musi se vytvorit struktura asociaci,
+		// protoze pokud ma loggableEntity OneToOne nebo OneToMany vazby s nastavenym loggableProperty,
+		// ve kterych dojde ke zmene, tak v getScheduledEntity metodach bude jen tato kolekce,
+		// ale nebude tu materska entita, ktera ma nastaveno loggableEntity, a tudiz nedojde k zalogovani
+		$structure = $this->changeSetFactory->getLoggableEntityAssociationStructure();
+		
 		$uow = $eventArgs->getEntityManager()->getUnitOfWork();
-
-//		foreach ($this->uow->getScheduledEntityUpdates() as $entity) {
-//			$this->scheduledEntities[spl_object_hash($entity)] = ChangeSet::ACTION_EDIT;
-//		}
-//		foreach ($this->uow->getScheduledEntityInsertions() as $entity) {
-//			$this->scheduledEntities[spl_object_hash($entity)] = ChangeSet::ACTION_CREATE;
-//		}
-//		foreach ($this->uow->getScheduledEntityDeletions() as $entity) {
-//			$this->scheduledEntities[spl_object_hash($entity)] = ChangeSet::ACTION_DELETE;
-//		}
-
-
-		foreach ($uow->getIdentityMap() as $entityClass => $entityList) {
-			if (!$this->changeSetFactory->isEntityLogged($entityClass)) {
-				continue;
+		foreach (['getScheduledEntityInsertions', 'getScheduledEntityUpdates', 'getScheduledEntityDeletions'] as $method) {
+			foreach (call_user_func([$uow, $method]) as $entity) {
+				$entityClass = ClassUtils::getClass($entity);
+				// jedna se o entitu s anotaci loggableEntity
+				if ($this->changeSetFactory->isEntityLogged($entityClass)) {
+					$this->changeSetFactory->processLoggedEntity($entity);
+				}
+				// jedna se o upravenou asociaci, jejiz primarni entita ma anotaci loggableEntity
+				elseif (isset($structure[$entityClass])) {
+					if ($loggableEntity = $this->changeSetFactory->getLoggableEntityFromAssosicationStructure($entity)) {
+						$this->changeSetFactory->processLoggedEntity($loggableEntity);
+					}
+				}
 			}
-			foreach ($entityList as $entity) {
-				$this->changeSetFactory->processLoggedEntity($entity);
-			}
-		}
-
-		foreach ($uow->getScheduledEntityInsertions() as $entity) {
-			$entityClass = ClassUtils::getClass($entity);
-			if (!$this->changeSetFactory->isEntityLogged($entityClass)) {
-				continue;
-			}
-			$this->changeSetFactory->processLoggedEntity($entity);
 		}
 	}
 
