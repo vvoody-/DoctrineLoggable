@@ -21,7 +21,7 @@ class LoggableListener implements EventSubscriber
 	function getSubscribedEvents()
 	{
 		return [
-			'onFlush',
+			'onFlush' => ['onFlush', -PHP_INT_MIN], // The priorities of the internal Symfony listeners usually range from -256 to 256 but your own listeners can use any positive or negative integer.
 			'postPersist',
 		];
 	}
@@ -41,6 +41,7 @@ class LoggableListener implements EventSubscriber
 		$structure = $this->changeSetFactory->getLoggableEntityAssociationStructure();
 		
 		$uow = $eventArgs->getEntityManager()->getUnitOfWork();
+
 		foreach (['getScheduledEntityInsertions', 'getScheduledEntityUpdates', 'getScheduledEntityDeletions'] as $method) {
 			foreach (call_user_func([$uow, $method]) as $entity) {
 				$entityClass = ClassUtils::getClass($entity);
