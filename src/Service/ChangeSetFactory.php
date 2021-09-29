@@ -4,6 +4,7 @@ namespace Adt\DoctrineLoggable\Service;
 
 use Adt\DoctrineLoggable\ChangeSet AS CS;
 use Adt\DoctrineLoggable\Annotations AS DLA;
+use Adt\DoctrineLoggable\Entity\ConvertableToScalar;
 use Adt\DoctrineLoggable\Entity\LogEntry;
 use Doctrine\Common\Annotations\Reader;
 use Doctrine\Common\Collections\Collection;
@@ -143,9 +144,14 @@ class ChangeSetFactory
 			$columnAnnotation = $this->reader->getPropertyAnnotation($property, Column::class);
 			if ($columnAnnotation) {
 				if (isset($uowEntiyChangeSet[$property->getName()])) {
-					$propertyChangeSet = $uowEntiyChangeSet[$property->getName()];
-
-					$nodeScalar = new CS\Scalar($property->name, $propertyChangeSet[0], $propertyChangeSet[1]);
+					list($old, $new) = $uowEntiyChangeSet[$property->getName()];
+					if (is_object($old) && $old instanceof ConvertableToScalar) {
+						$old = $old->toScalar();
+					}
+					if (is_object($new) && $new instanceof ConvertableToScalar) {
+						$new = $new->toScalar();
+					}
+					$nodeScalar = new CS\Scalar($property->name, $old, $new);
 					$changeSet->addPropertyChange($nodeScalar);
 				}
 				continue;
