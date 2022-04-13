@@ -9,6 +9,7 @@ use Doctrine\Common\Annotations\Reader;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\Common\EventManager;
 use Doctrine\Common\Util\ClassUtils;
+use Doctrine\DBAL\Types\Type;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\Mapping\Column;
 use Doctrine\ORM\Mapping\ManyToMany;
@@ -116,6 +117,9 @@ class ChangeSetFactory
 			return NULL;
 		}
 
+		$class = ClassUtils::getClass($entity);
+		$metadata = $this->em->getClassMetadata($class);
+
 		$sploh = spl_object_hash($entity);
 		if (isset($this->computedEntityChangeSets[$sploh])) {
 			$changeSet = $this->computedEntityChangeSets[$sploh];
@@ -143,9 +147,13 @@ class ChangeSetFactory
 			$columnAnnotation = $this->reader->getPropertyAnnotation($property, Column::class);
 			if ($columnAnnotation) {
 				if (isset($uowEntiyChangeSet[$property->getName()])) {
+					$type = Type::getType($metadata->getTypeOfField($property->getName()));
 					$propertyChangeSet = $uowEntiyChangeSet[$property->getName()];
-
-					$nodeScalar = new CS\Scalar($property->name, $propertyChangeSet[0], $propertyChangeSet[1]);
+					$nodeScalar = new CS\Scalar(
+						$property->name,
+						$type->convertToDatabaseValue($propertyChangeSet[0], $this->em->getConnection()->getDatabasePlatform()),
+						$type->convertToDatabaseValue($propertyChangeSet[1], $this->em->getConnection()->getDatabasePlatform())
+					);
 					$changeSet->addPropertyChange($nodeScalar);
 				}
 				continue;
