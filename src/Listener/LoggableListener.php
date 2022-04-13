@@ -21,7 +21,7 @@ class LoggableListener implements EventSubscriber
 	function getSubscribedEvents()
 	{
 		return [
-			'onFlush' => ['onFlush', PHP_INT_MIN], // The priorities of the internal Symfony listeners usually range from -256 to 256 but your own listeners can use any positive or negative integer.
+			'onFlush',
 			'postPersist',
 		];
 	}
