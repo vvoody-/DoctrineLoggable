@@ -11,13 +11,8 @@ use Kdyby\Doctrine\DI\IEntityProvider;
 use Nette\Application\Application;
 use Nette\DI\CompilerExtension;
 
-class LoggableExtension extends CompilerExtension implements IEntityProvider
+class LoggableExtension extends CompilerExtension
 {
-
-	function getEntityMappings()
-	{
-		return [LogEntry::class => __DIR__ . '/../Entity'];
-	}
 
 	public function loadConfiguration()
 	{
