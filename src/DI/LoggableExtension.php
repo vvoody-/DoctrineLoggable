@@ -4,8 +4,10 @@ namespace Adt\DoctrineLoggable\DI;
 
 use Adt\DoctrineLoggable\Entity\LogEntry;
 use Adt\DoctrineLoggable\Listener\LoggableListener;
+use Adt\DoctrineLoggable\Mapping\Driver\AttributeAnnotationReader;
 use Adt\DoctrineLoggable\Service\ChangeSetFactory;
 use Adt\DoctrineLoggable\Service\SessionUserIdProvider;
+use Doctrine\Common\Annotations\Reader;
 use Doctrine\Common\EventManager;
 use Kdyby\Doctrine\DI\IEntityProvider;
 use Nette\Application\Application;
@@ -31,7 +33,18 @@ class LoggableExtension extends CompilerExtension
 	public function beforeCompile()
 	{
 		$builder = $this->getContainerBuilder();
-		
+
+		if ($builder->getByType(Reader::class)) {
+			$attributeAnnotationReader = $builder->addDefinition($this->prefix('attributeAnnotationReader'))
+				->setFactory(AttributeAnnotationReader::class, ['@' . Reader::class]);
+		} else {
+			$attributeAnnotationReader = $builder->addDefinition($this->prefix('attributeAnnotationReader'))
+				->setFactory(AttributeAnnotationReader::class);
+		}
+		$attributeAnnotationReader->setAutowired(false);
+		$builder->getDefinitionByType(ChangeSetFactory::class)
+			->setArgument('reader', $attributeAnnotationReader);
+
 		$serviceName = $builder->getByType(EventManager::class);
 		$builder->getDefinition($serviceName)
 			->addSetup('addEventSubscriber', ['@'.$this->prefix('listener')]);
