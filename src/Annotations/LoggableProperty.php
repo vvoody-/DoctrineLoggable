@@ -2,10 +2,13 @@
 
 namespace Adt\DoctrineLoggable\Annotations;
 
+use Attribute;
+
 /**
  * @Annotation
  * @Target("PROPERTY")
  */
+#[Attribute(Attribute::TARGET_PROPERTY)]
 class LoggableProperty
 {
 	
