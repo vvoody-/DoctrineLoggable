@@ -3,6 +3,7 @@
 namespace Adt\DoctrineLoggable\Annotations;
 
 use Doctrine\Common\Annotations\Annotation\Required;
+use Attribute;
 
 /**
  * @Annotation
