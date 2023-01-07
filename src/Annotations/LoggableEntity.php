@@ -2,6 +2,8 @@
 
 namespace Adt\DoctrineLoggable\Annotations;
 
+use Attribute;
+
 /**
  * @Annotation
  * @Target("CLASS")
