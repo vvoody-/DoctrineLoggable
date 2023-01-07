@@ -15,7 +15,7 @@ use ReflectionMethod;
 final class AttributeAnnotationReader implements Reader
 {
     /**
-     * @var Reader
+     * @var ?Reader
      */
     private $annotationReader;
 
@@ -41,6 +41,10 @@ final class AttributeAnnotationReader implements Reader
             return $annotations;
         }
 
+		if (!$this->annotationReader) {
+			return [];
+		}
+
         return $this->annotationReader->getClassAnnotations($class);
     }
 
@@ -59,6 +63,10 @@ final class AttributeAnnotationReader implements Reader
             return $annotation;
         }
 
+		if (!$this->annotationReader) {
+			return null;
+		}
+
         return $this->annotationReader->getClassAnnotation($class, $annotationName);
     }
 
@@ -72,6 +80,10 @@ final class AttributeAnnotationReader implements Reader
         if ([] !== $propertyAnnotations) {
             return $propertyAnnotations;
         }
+
+		if (!$this->annotationReader) {
+			return [];
+		}
 
         return $this->annotationReader->getPropertyAnnotations($property);
     }
@@ -90,6 +102,10 @@ final class AttributeAnnotationReader implements Reader
         if (null !== $annotation) {
             return $annotation;
         }
+
+		if (!$this->annotationReader) {
+			return null;
+		}
 
         return $this->annotationReader->getPropertyAnnotation($property, $annotationName);
     }
