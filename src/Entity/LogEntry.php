@@ -11,26 +11,32 @@ use Doctrine\ORM\Mapping as ORM;
  * 	indexes={@ORM\Index(name="log_entity_lookup_idx", columns={"object_id", "object_class"})}
  * )
  */
+#[ORM\Table]
+#[ORM\Index(name: 'log_entity_lookup_idx', columns: ['object_id', 'object_class'])]
+#[ORM\Entity]
 class LogEntry
 {
-	
+	const ACTION_CREATE = 'create';
+	const ACTION_UPDATE = 'update';
+	const ACTION_REMOVE = 'remove';
+
 	/**
 	 * @ORM\Id
 	 * @ORM\Column(type="integer")
 	 * @ORM\GeneratedValue
 	 * @var integer
 	 */
+	#[ORM\Id]
+	#[ORM\Column(type: 'integer')]
+	#[ORM\GeneratedValue]
 	protected $id;
-
-	const ACTION_CREATE = 'create';
-	const ACTION_UPDATE = 'update';
-	const ACTION_REMOVE = 'remove';
 
 	/**
 	 * @var string $action
 	 *
 	 * @ORM\Column(type="string", length=8)
 	 */
+	#[ORM\Column(type: 'string', length: 8)]
 	protected $action;
 
 	/**
@@ -38,6 +44,7 @@ class LogEntry
 	 *
 	 * @ORM\Column(type="datetime")
 	 */
+	#[ORM\Column(type: 'datetime')]
 	protected $loggedAt;
 
 	/**
@@ -45,6 +52,7 @@ class LogEntry
 	 *
 	 * @ORM\Column(type="integer", name="object_id", nullable=true)
 	 */
+	#[ORM\Column(type: 'integer', name: 'object_id', nullable: true)]
 	protected $objectId;
 
 	/**
@@ -52,16 +60,19 @@ class LogEntry
 	 *
 	 * @ORM\Column(type="string", name="object_class")
 	 */
+	#[ORM\Column(type: 'string', name: 'object_class')]
 	protected $objectClass;
 
 	/**
 	 * @ORM\Column(type="object")
 	 */
+	#[ORM\Column(type: 'object')]
 	protected $changeSet;
 
 	/**
 	 * @ORM\Column(type="integer", nullable=true)
 	 */
+	#[ORM\Column(type: 'integer', nullable: true)]
 	protected $userId;
 
 	public function setLoggedNow()
