@@ -8,6 +8,7 @@ use Doctrine\Common\Annotations\Annotation\Required;
  * @Annotation
  * @Target("CLASS")
  */
+#[Attribute(Attribute::TARGET_CLASS)]
 class LoggableIdentification
 {
 
