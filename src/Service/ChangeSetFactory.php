@@ -16,6 +16,7 @@ use Doctrine\ORM\Mapping\OneToMany;
 use Doctrine\ORM\Mapping\OneToOne;
 use Doctrine\ORM\PersistentCollection;
 use Doctrine\ORM\UnitOfWork;
+use Laminas\Code\Reflection\PropertyReflection;
 
 class ChangeSetFactory
 {
@@ -141,8 +142,8 @@ class ChangeSetFactory
 				if (isset($uowEntiyChangeSet[$property->getName()])) {
 					$propertyChangeSet = $uowEntiyChangeSet[$property->getName()];
 
-					$nodeScalar = new CS\Scalar($property->name, $propertyChangeSet[0], $propertyChangeSet[1]);
-					$changeSet->addPropertyChange($nodeScalar);
+					$scalar = $this->getScalarChangeSet($property, $propertyChangeSet[0], $propertyChangeSet[1]);
+					$changeSet->addPropertyChange($scalar);
 				}
 				continue;
 			}
@@ -177,6 +178,30 @@ class ChangeSetFactory
 		}
 		return $changeSet;
 	}
+
+
+	/**
+	 * @return CS\Scalar
+	 */
+	protected function getScalarChangeSet(\ReflectionProperty $property, $oldValue, $newValue)
+	{
+		/** @var DLA\LoggableProperty $loggablePropertyAnnotation */
+		$loggablePropertyAnnotation = $this->reader->getPropertyAnnotation($property, DLA\LoggableProperty::class);
+
+		$forceChanged = false;
+		if (!$loggablePropertyAnnotation->logValue) {
+			$forceChanged = true;
+			if ($oldValue !== null) {
+				$oldValue = true;
+			}
+			if ($newValue !== null) {
+				$newValue = true;
+			}
+		}
+
+		return new CS\Scalar($property->name, $oldValue, $newValue, $forceChanged);
+	}
+
 
 	/**
 	 * @param $entity

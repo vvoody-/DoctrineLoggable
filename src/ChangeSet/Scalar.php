@@ -13,11 +13,19 @@ class Scalar extends PropertyChangeSet
 	/** @var string|int|float|bool|NULL new value */
 	protected $n;
 
-	public function __construct($name, $old, $new)
+	/**
+	 * true - property is marked as changed regardles of old and new values
+	 *
+	 * @var bool
+	 */
+	protected $f = false;
+
+	public function __construct($name, $old, $new, $forceChanged = false)
 	{
 		parent::__construct($name);
 		$this->o = $old;
 		$this->n = $new;
+		$this->f = $forceChanged;
 	}
 
 	/**
@@ -25,7 +33,7 @@ class Scalar extends PropertyChangeSet
 	 */
 	public function isChanged()
 	{
-		return $this->o != $this->n;
+		return $this->f || $this->o != $this->n;
 	}
 
 	/**
@@ -63,6 +71,6 @@ class Scalar extends PropertyChangeSet
 
 	function __sleep()
 	{
-		return ['o', 'n'];
+		return ['o', 'n', 'f'];
 	}
 }
