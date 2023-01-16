@@ -28,6 +28,12 @@ class Scalar extends PropertyChangeSet
 		$this->f = $forceChanged;
 	}
 
+
+	public function isValueLogged(): bool
+	{
+		return !$this->f;
+	}
+
 	/**
 	 * @return bool
 	 */
