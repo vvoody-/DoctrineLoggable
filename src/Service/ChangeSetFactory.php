@@ -199,6 +199,13 @@ class ChangeSetFactory
 			}
 		}
 
+		if (!is_scalar($oldValue)) {
+			$oldValue = (string) $oldValue;
+		}
+		if (!is_scalar($newValue)) {
+			$newValue = (string) $newValue;
+		}
+
 		return new CS\Scalar($property->name, $oldValue, $newValue, $forceChanged);
 	}
 
