@@ -199,10 +199,10 @@ class ChangeSetFactory
 			}
 		}
 
-		if (!is_scalar($oldValue)) {
+		if (is_object($oldValue) && method_exists($oldValue, '__toString')) {
 			$oldValue = (string) $oldValue;
 		}
-		if (!is_scalar($newValue)) {
+		if (is_object($newValue) && method_exists($newValue, '__toString')) {
 			$newValue = (string) $newValue;
 		}
 
