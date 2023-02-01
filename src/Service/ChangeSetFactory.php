@@ -415,6 +415,8 @@ class ChangeSetFactory
 			$this->em->persist($logEntry);
 			$this->em->flush($logEntry);
 		}
+
+		$this->clear();
 	}
 
 	protected function getLogEntry($entity)
@@ -462,4 +464,12 @@ class ChangeSetFactory
 		$this->uow = $this->em->getUnitOfWork();
 	}
 
+
+	public function clear()
+	{
+		$this->logEntries = [];
+		$this->scheduledEntities = [];
+		$this->computedEntityChangeSets = [];
+		$this->identifications = [];
+	}
 }
