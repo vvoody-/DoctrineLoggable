@@ -46,9 +46,6 @@ class ChangeSetFactory
 	 */
 	protected $logEntries = [];
 
-	/** @var LogEntry */
-	protected $currentLogEntry;
-
 	/** @var [] */
 	protected $scheduledEntities = [];
 
