@@ -34,7 +34,7 @@ class LogEntry
 	protected $action;
 
 	/**
-	 * @var string $loggedAt
+	 * @var \DateTime $loggedAt
 	 *
 	 * @ORM\Column(type="datetime")
 	 */
@@ -94,7 +94,7 @@ class LogEntry
 	}
 
 	/**
-	 * @return string
+	 * @return \DateTime
 	 */
 	public function getLoggedAt()
 	{
