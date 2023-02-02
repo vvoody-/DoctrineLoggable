@@ -410,6 +410,9 @@ class ChangeSetFactory
 			return;
 		}
 		foreach ($this->logEntries as $logEntry) {
+			if ($this->userIdProvider) {
+				$logEntry->setUserId($this->userIdProvider->getId());
+			}
 			$logEntry->setObjectId($logEntry->getChangeSet()->getIdentification()->getId());
 			$logEntry->setAction($logEntry->getChangeSet()->getAction());
 			$this->em->persist($logEntry);
@@ -430,9 +433,6 @@ class ChangeSetFactory
 		$logEntryClass = $this->getLogEntryClass();
 		/** @var LogEntry $logEntry */
 		$logEntry = new $logEntryClass;
-		if ($this->userIdProvider) {
-			$logEntry->setUserId($this->userIdProvider->getId());
-		}
 		$logEntry->setLoggedNow();
 		$logEntry->setObjectClass($entityClassName);
 		$logEntry->setObjectId($entity->id);
