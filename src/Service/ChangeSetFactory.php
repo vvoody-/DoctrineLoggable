@@ -58,6 +58,11 @@ class ChangeSetFactory
 	/** @var UserIdProvider */
 	private $userIdProvider;
 
+	/**
+	 * @var callable|null
+	 */
+	protected $onBeforeLogEntryFlush = null;
+
 	public function __construct(Reader $reader, UserIdProvider $userIdProvider)
 	{
 		$this->reader = $reader;
@@ -416,6 +421,9 @@ class ChangeSetFactory
 			$logEntry->setObjectId($logEntry->getChangeSet()->getIdentification()->getId());
 			$logEntry->setAction($logEntry->getChangeSet()->getAction());
 			$this->em->persist($logEntry);
+			if ($this->onBeforeLogEntryFlush) {
+				call_user_func($this->onBeforeLogEntryFlush, $logEntry);
+			}
 			$this->em->flush($logEntry);
 		}
 
@@ -471,5 +479,15 @@ class ChangeSetFactory
 		$this->scheduledEntities = [];
 		$this->computedEntityChangeSets = [];
 		$this->identifications = [];
+	}
+
+
+	/**
+	 * @param callable $onBeforeLogEntryFlush
+	 * @return void
+	 */
+	public function setOnBeforeLogEntryFlush(callable $onBeforeLogEntryFlush): void
+	{
+		$this->onBeforeLogEntryFlush = $onBeforeLogEntryFlush;
 	}
 }
