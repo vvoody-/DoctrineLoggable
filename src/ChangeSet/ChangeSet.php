@@ -34,6 +34,16 @@ class ChangeSet
 	}
 
 	/**
+	 * @return void
+	 */
+	public function removePropertyChangeset(string $propertyName)
+	{
+		if (isset($this->p[$propertyName])) {
+			unset($this->p[$propertyName]);
+		}
+	}
+
+	/**
 	 * @return bool
 	 */
 	public function isChanged()
