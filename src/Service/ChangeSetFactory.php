@@ -166,9 +166,9 @@ class ChangeSetFactory
 
 
 			// property is toMany collection
-			/** @var ManyToOne $manyToOneAnnotation */
+			/** @var ManyToMany $manyToManyAnnotation */
 			$manyToManyAnnotation = $this->reader->getPropertyAnnotation($property, ManyToMany::class);
-			/** @var OneToOne $oneToOneAnnotation */
+			/** @var OneToMany $oneToManyAnnotation */
 			$oneToManyAnnotation = $this->reader->getPropertyAnnotation($property, OneToMany::class);
 			if ($manyToManyAnnotation || $oneToManyAnnotation) {
 
