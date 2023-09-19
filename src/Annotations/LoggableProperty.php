@@ -21,7 +21,12 @@ class LoggableProperty implements Annotation
 	/** @var string */
 	public $label = NULL;
 
-	public function __construct(bool $logEntity = true, bool $logFile = false, string $label = null)
+	/**
+	 * @param bool $logEntity
+	 * @param bool $logFile
+	 * @param string|null $label
+	 */
+	public function __construct($logEntity = true, $logFile = false, string $label = null)
 	{
 		$this->logEntity = $logEntity;
 		$this->logFile = $logFile;

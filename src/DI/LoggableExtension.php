@@ -43,7 +43,7 @@ class LoggableExtension extends CompilerExtension
 		}
 		$attributeAnnotationReader->setAutowired(false);
 		$builder->getDefinitionByType(ChangeSetFactory::class)
-			->setArgument('reader', $attributeAnnotationReader);
+			->setArguments(['reader' => $attributeAnnotationReader]);
 
 		$serviceName = $builder->getByType(EventManager::class);
 		$builder->getDefinition($serviceName)
