@@ -288,6 +288,12 @@ class ChangeSetFactory
 	{
 		$nodeCollection = new CS\ToMany($property->name);
 
+		if ($entity instanceof \Doctrine\ORM\Proxy\Proxy) {
+			if (!$entity->__isInitialized()) {
+				$entity->__load();
+			}
+		}
+
 		/** @var PersistentCollection $collection */
 		$property->setAccessible(TRUE);
 		$collection = $property->getValue($entity);
