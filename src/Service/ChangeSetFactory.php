@@ -421,8 +421,13 @@ class ChangeSetFactory
 								}
 							}
 
-							$fieldValue = $this->em->getClassMetadata(ClassUtils::getClass($value))
-								->getFieldValue($value, $fieldNamePart);
+							$getter = 'get' . ucfirst($fieldNamePart);
+							if (method_exists($value, $getter)) {
+								$fieldValue = $value->$getter();
+							} else {
+								$fieldValue = $this->em->getClassMetadata(ClassUtils::getClass($value))
+									->getFieldValue($value, $fieldNamePart);
+							}
 							if (is_array($fieldValue) || $fieldValue instanceof \Traversable) {
 								foreach ($fieldValue as $item) {
 									$newValues[] = $this->convertIdentificationValue($item);
