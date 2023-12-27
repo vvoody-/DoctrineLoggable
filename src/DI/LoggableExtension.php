@@ -15,7 +15,7 @@ use Nette\DI\CompilerExtension;
 
 class LoggableExtension extends CompilerExtension
 {
-	public function afterCompile(\Nette\PhpGenerator\ClassType $class)
+	public function loadConfiguration()
 	{
 		$builder = $this->getContainerBuilder();
 
@@ -27,6 +27,11 @@ class LoggableExtension extends CompilerExtension
 
 		$builder->addDefinition($this->prefix('userIdProvider'))
 			->setFactory(SessionUserIdProvider::class);
+	}
+
+	public function beforeCompile()
+	{
+		$builder = $this->getContainerBuilder();
 
 		if ($builder->getByType(Reader::class)) {
 			$attributeAnnotationReader = $builder->addDefinition($this->prefix('attributeAnnotationReader'))
@@ -41,10 +46,10 @@ class LoggableExtension extends CompilerExtension
 
 		$serviceName = $builder->getByType(EventManager::class);
 		$builder->getDefinition($serviceName)
-			->addSetup('addEventSubscriber', ['@'.$this->prefix('listener')]);
+			->addSetup('addEventSubscriber', ['@' . $this->prefix('listener')]);
 
 		$serviceName = $builder->getByType(Application::class);
 		$builder->getDefinition($serviceName)
-			->addSetup('$service->onShutdown[] = ?', [['@'.$this->prefix('changeSetFactory'), 'shutdownFlush']]);
+			->addSetup('$service->onShutdown[] = ?', [['@' . $this->prefix('changeSetFactory'), 'shutdownFlush']]);
 	}
 }
