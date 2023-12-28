@@ -28,10 +28,6 @@ class LoggableListener implements EventSubscriber
 
 	public function onFlush(OnFlushEventArgs $eventArgs)
 	{
-		if ($this->changeSetFactory->isAfterShutdown()) {
-			return;
-		}
-
 		$this->changeSetFactory->setEntityManager($eventArgs->getEntityManager());
 
 		// musi se vytvorit struktura asociaci,
@@ -61,9 +57,6 @@ class LoggableListener implements EventSubscriber
 
 	public function postPersist(LifecycleEventArgs $args)
 	{
-		if ($this->changeSetFactory->isAfterShutdown()) {
-			return;
-		}
 		$object = $args->getObject();
 		$this->changeSetFactory->updateIdentification($object);
 	}

@@ -62,9 +62,6 @@ class ChangeSetFactory
 	/** @var UserIdProvider */
 	private $userIdProvider;
 
-	/** @var boolean */
-	protected $afterShutdown = FALSE;
-
 	protected $associationStructure = [];
 
 	public function __construct(Reader $reader, UserIdProvider $userIdProvider)
@@ -73,7 +70,7 @@ class ChangeSetFactory
 		$this->userIdProvider = $userIdProvider;
 	}
 
-	// vystvori napriklad nasledujici strukturu
+	// vytvori napriklad nasledujici strukturu
 	//$structure = [
 	//	'Entity\UserAgreement' => [
 	//		[
@@ -186,7 +183,9 @@ class ChangeSetFactory
 		if (!$changeSet->isChanged()) {
 			return;
 		}
-		$this->getLogEntry($entity)->setChangeset($changeSet);
+		$logEntry = $this->getLogEntry($entity);
+		$logEntry->setChangeset($changeSet);
+		$this->em->getUnitOfWork()->computeChangeSet($this->em->getClassMetadata($logEntry::class), $logEntry);
 	}
 
 	public function updateIdentification($entity)
@@ -494,44 +493,30 @@ class ChangeSetFactory
 		return isset($properties[$propertyName]) ? $properties[$propertyName] : NULL;
 	}
 
-	public function shutdownFlush()
-	{
-		$this->afterShutdown = TRUE;
-		if (!isset($this->em) || count($this->logEntries) === 0) {
-			return;
-		}
-		foreach ($this->logEntries as $logEntry) {
-			$logEntry->setObjectId($logEntry->getChangeSet()->getIdentification()->getId());
-			$logEntry->setAction($logEntry->getChangeSet()->getAction());
-			$this->em->persist($logEntry);
-			$this->em->flush($logEntry);
-		}
-	}
-
 	public function getLogEntry($entity)
 	{
 		$soh = spl_object_hash($entity);
 		if (isset($this->logEntries[$soh])) {
 			return $this->logEntries[$soh];
 		}
+
 		$metadata = $this->em->getClassMetadata(get_class($entity));
-		$entityClassName = $metadata->name;
 
 		$logEntryClass = $this->getLogEntryClass();
+
 		/** @var LogEntry $logEntry */
 		$logEntry = new $logEntryClass;
 		if ($this->userIdProvider) {
 			$logEntry->setUserId($this->userIdProvider->getId());
 		}
 		$logEntry->setLoggedNow();
-		$logEntry->setObjectClass($entityClassName);
-
-		$pkField = $metadata->getSingleIdentifierFieldName();
-
-		$pk = $metadata->getIdentifierValues($entity);
-		$logEntry->setObjectId(implode('-', $pk));
+		$logEntry->setObjectClass($metadata->name);
+		$logEntry->setObjectId(implode('-', $metadata->getIdentifierValues($entity)));
+		$logEntry->setAction(CS\ChangeSet::ACTION_EDIT);
 
 		$this->logEntries[spl_object_hash($entity)] = $logEntry;
+		$this->em->persist($logEntry);
+
 		return $logEntry;
 	}
 
@@ -561,13 +546,4 @@ class ChangeSetFactory
 		$this->uow = $this->em->getUnitOfWork();
 		return $this;
 	}
-
-	/**
-	 * @return bool
-	 */
-	public function isAfterShutdown()
-	{
-		return $this->afterShutdown;
-	}
-
 }

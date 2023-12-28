@@ -22,9 +22,6 @@ class LoggableExtension extends CompilerExtension
 		$builder->addDefinition($this->prefix('changeSetFactory'))
 			->setFactory(ChangeSetFactory::class);
 
-		$builder->addDefinition($this->prefix('listener'))
-			->setFactory(LoggableListener::class);
-
 		$builder->addDefinition($this->prefix('userIdProvider'))
 			->setFactory(SessionUserIdProvider::class);
 	}
@@ -44,12 +41,11 @@ class LoggableExtension extends CompilerExtension
 		$builder->getDefinitionByType(ChangeSetFactory::class)
 			->setArguments(['reader' => $attributeAnnotationReader]);
 
-		$serviceName = $builder->getByType(EventManager::class);
-		$builder->getDefinition($serviceName)
+		// intentionally registered here instead of in loadConfiguration to avoid autoregistration
+		// in nettrine dbal extension
+		$builder->addDefinition($this->prefix('listener'))
+			->setFactory(LoggableListener::class);
+		$builder->getDefinition($builder->getByType(EventManager::class))
 			->addSetup('addEventSubscriber', ['@' . $this->prefix('listener')]);
-
-		$serviceName = $builder->getByType(Application::class);
-		$builder->getDefinition($serviceName)
-			->addSetup('$service->onShutdown[] = ?', [['@' . $this->prefix('changeSetFactory'), 'shutdownFlush']]);
 	}
 }
