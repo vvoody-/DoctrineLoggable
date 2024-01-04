@@ -177,9 +177,9 @@ class ChangeSetFactory
 		return $this->loggableEntityClasses[$entityClass];
 	}
 
-	public function processLoggedEntity($entity)
+	public function processLoggedEntity($entity, $relatedEntity = null)
 	{
-		$changeSet = $this->getChangeSet($entity);
+		$changeSet = $this->getChangeSet($entity, $relatedEntity);
 		if (!$changeSet->isChanged()) {
 			return;
 		}
@@ -206,7 +206,7 @@ class ChangeSetFactory
 	 * @param $entity
 	 * @return CS\ChangeSet
 	 */
-	protected function getChangeSet($entity = NULL)
+	protected function getChangeSet($entity = NULL, $relatedEntity = null)
 	{
 		if ($entity === NULL) {
 			return NULL;
@@ -269,7 +269,7 @@ class ChangeSetFactory
 			$oneToManyAnnotation = $this->reader->getPropertyAnnotation($property, OneToMany::class);
 			if ($manyToManyAnnotation || $oneToManyAnnotation) {
 
-				$nodeCollection = $this->getCollectionChangeSet($entity, $property);
+				$nodeCollection = $this->getCollectionChangeSet($entity, $property, $relatedEntity);
 
 				$changeSet->addPropertyChange($nodeCollection);
 			}
@@ -283,7 +283,7 @@ class ChangeSetFactory
 	 * @param \ReflectionProperty $property
 	 * @return CS\ToMany
 	 */
-	public function getCollectionChangeSet($entity, \ReflectionProperty $property)
+	public function getCollectionChangeSet($entity, \ReflectionProperty $property, $relatedEntity = null)
 	{
 		$nodeCollection = new CS\ToMany($property->name);
 
@@ -318,8 +318,15 @@ class ChangeSetFactory
 		/** @var DLA\LoggableProperty $loggablePropertyAnnotation */
 		$loggablePropertyAnnotation = $this->reader->getPropertyAnnotation($property, DLA\LoggableProperty::class);
 		if ($loggablePropertyAnnotation->logEntity) {
-			foreach ($collection as $relatedEntity) {
-				$nodeCollection->addChangeSet($this->getChangeSet($relatedEntity));
+			foreach ($collection as $_relatedEntity) {
+				$nodeCollection->addChangeSet($this->getChangeSet($_relatedEntity));
+			}
+		} elseif ($relatedEntity) {
+			foreach ($collection as $_relatedEntity) {
+				if ($relatedEntity === $_relatedEntity) {
+					$nodeCollection->addChangeSet($this->getChangeSet($relatedEntity));
+					break;
+				}
 			}
 		}
 

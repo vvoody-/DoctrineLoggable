@@ -48,7 +48,7 @@ class LoggableListener implements EventSubscriber
 				// jedna se o upravenou asociaci, jejiz primarni entita ma anotaci loggableEntity
 				elseif (isset($structure[$entityClass])) {
 					if ($loggableEntity = $this->changeSetFactory->getLoggableEntityFromAssosicationStructure($entity)) {
-						$this->changeSetFactory->processLoggedEntity($loggableEntity);
+						$this->changeSetFactory->processLoggedEntity($loggableEntity, $entity);
 					}
 				}
 			}
