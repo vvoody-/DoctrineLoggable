@@ -241,6 +241,20 @@ class ChangeSetFactory
 				if (isset($uowEntiyChangeSet[$property->getName()])) {
 					$propertyChangeSet = $uowEntiyChangeSet[$property->getName()];
 
+					if ($columnAnnotation->type === 'json') {
+						$clearedOldData = $clearedNewData = [];
+
+						foreach ($propertyChangeSet[0] as $key => $value) {
+							if ($propertyChangeSet[1][$key] !== $value) {
+								$clearedOldData[$key] = $value;
+								$clearedNewData[$key] = $propertyChangeSet[1][$key];
+							}
+						}
+
+						$propertyChangeSet[0] = json_encode($clearedOldData, JSON_PRETTY_PRINT);
+						$propertyChangeSet[1] = json_encode($clearedNewData, JSON_PRETTY_PRINT);
+					}
+
 					$nodeScalar = new CS\Scalar($property->name, $propertyChangeSet[0], $propertyChangeSet[1]);
 					$changeSet->addPropertyChange($nodeScalar);
 				}
