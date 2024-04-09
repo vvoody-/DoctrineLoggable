@@ -18,6 +18,7 @@ use Doctrine\ORM\Mapping\OneToMany;
 use Doctrine\ORM\Mapping\OneToOne;
 use Doctrine\ORM\PersistentCollection;
 use Doctrine\ORM\UnitOfWork;
+use Nette\Utils\Json;
 
 class ChangeSetFactory
 {
@@ -251,8 +252,8 @@ class ChangeSetFactory
 							}
 						}
 
-						$propertyChangeSet[0] = json_encode($clearedOldData, JSON_PRETTY_PRINT);
-						$propertyChangeSet[1] = json_encode($clearedNewData, JSON_PRETTY_PRINT);
+						$propertyChangeSet[0] = Json::encode($clearedOldData);
+						$propertyChangeSet[1] = Json::encode($clearedNewData);
 					}
 
 					$nodeScalar = new CS\Scalar($property->name, $propertyChangeSet[0], $propertyChangeSet[1]);
