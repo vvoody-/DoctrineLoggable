@@ -242,7 +242,7 @@ class ChangeSetFactory
 				if (isset($uowEntiyChangeSet[$property->getName()])) {
 					$propertyChangeSet = $uowEntiyChangeSet[$property->getName()];
 
-					if ($columnAnnotation->type === 'json') {
+					if ($columnAnnotation->type === 'json' && isset($propertyChangeSet[0]) && isset($propertyChangeSet[1])) {
 						$clearedOldData = $clearedNewData = [];
 
 						foreach ($propertyChangeSet[0] as $key => $value) {
