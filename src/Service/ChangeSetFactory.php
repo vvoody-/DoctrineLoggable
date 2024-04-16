@@ -246,7 +246,7 @@ class ChangeSetFactory
 						$clearedOldData = $clearedNewData = [];
 
 						foreach ($propertyChangeSet[0] as $key => $value) {
-							if ($propertyChangeSet[1][$key] !== $value) {
+							if (array_key_exists($key, $propertyChangeSet) && $propertyChangeSet[1][$key] !== $value) {
 								$clearedOldData[$key] = $value;
 								$clearedNewData[$key] = $propertyChangeSet[1][$key];
 							}
