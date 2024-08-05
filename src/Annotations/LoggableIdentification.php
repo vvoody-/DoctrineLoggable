@@ -21,6 +21,10 @@ class LoggableIdentification implements Annotation
 
 	public function __construct(array $fields)
 	{
-		$this->fields = $fields;
+		if (isset($fields['fields'])) {
+			$this->fields = $fields['fields'];
+		} else {
+			$this->fields = $fields;
+		}
 	}
 }

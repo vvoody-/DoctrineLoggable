@@ -4,6 +4,7 @@ namespace Adt\DoctrineLoggable\Service;
 
 use Adt\DoctrineLoggable\ChangeSet AS CS;
 use Adt\DoctrineLoggable\Annotations AS DLA;
+use Adt\DoctrineLoggable\ChangeSet\ChangeSet;
 use Adt\DoctrineLoggable\Entity\LogEntry;
 use Doctrine\Common\Annotations\Reader;
 use Doctrine\Common\Collections\Collection;
@@ -18,50 +19,41 @@ use Doctrine\ORM\Mapping\OneToMany;
 use Doctrine\ORM\Mapping\OneToOne;
 use Doctrine\ORM\PersistentCollection;
 use Doctrine\ORM\UnitOfWork;
+use Exception;
 use Nette\Utils\Json;
+use ReflectionClass;
+use ReflectionException;
+use ReflectionProperty;
 
 class ChangeSetFactory
 {
+	protected EntityManager $em;
 
-	/** @var EntityManager */
-	protected $em;
+	protected UnitOfWork $uow;
 
-	/** @var UnitOfWork */
-	protected $uow;
+	private Reader $reader;
 
-	/** @var Reader */
-	private $reader;
+	protected string $logEntryClass = LogEntry::class;
 
-	/** @var string */
-	protected $logEntryClass = LogEntry::class;
+	protected array $loggableEntityClasses = [];
 
-	/** @var [] */
-	protected $loggableEntityClasses = [];
-
-	/** @var [] */
-	protected $loggableEntityProperties = [];
+	protected array $loggableEntityProperties = [];
 
 	/**
 	 * List of all log entries
 	 *
 	 * @var LogEntry[]
 	 */
-	protected $logEntries = [];
+	protected array $logEntries = [];
 
-	/** @var LogEntry */
-	protected $currentLogEntry;
+	protected array $scheduledEntities = [];
 
-	/** @var [] */
-	protected $scheduledEntities = [];
+	protected array $computedEntityChangeSets = [];
 
-	/** @var CS\ChangeSet[] */
-	protected $computedEntityChangeSets = [];
-
-	/** @var CS\Id[] */
-	protected $identifications = [];
+	protected array $identifications = [];
 
 	/** @var UserIdProvider */
-	private $userIdProvider;
+	private UserIdProvider $userIdProvider;
 
 	protected $associationStructure = [];
 
@@ -89,6 +81,9 @@ class ChangeSetFactory
 	//	]
 	//];
 	// jedna se o cestu od entity, na ktere se udala zmena, k materske entite, u ktere je anotace loggableEntity
+	/**
+	 * @throws ReflectionException
+	 */
 	public function getLoggableEntityAssociationStructure($className = null, $path = [])
 	{
 		if ($this->associationStructure) {
@@ -113,23 +108,20 @@ class ChangeSetFactory
 				$associationMapping = $classMetadata->getAssociationMapping($property->getName());
 				$associationPropertyName = '';
 				if ($associationMapping['type'] === ClassMetadataInfo::ONE_TO_ONE) {
-					$associationPropertyName = 'inversedBy';
+					// OneToOne works if entity is recreated on edit (for example files)
+					continue;
+					// TODO support of non recreating entities (for example address)
+					//$associationPropertyName = 'inversedBy';
 				}
 				elseif ($associationMapping['type'] === ClassMetadataInfo::ONE_TO_MANY){
 					$associationPropertyName = 'mappedBy';
 				}
 				if ($associationPropertyName) {
 					if (empty($associationMapping[$associationPropertyName])) {
-						throw new \Exception('The "' . $associationPropertyName . '" annotation property is missing for loggable property "' . $classMetadata->getName() . '::$' . $property->getName() . '"');
+						throw new Exception('The "' . $associationPropertyName . '" annotation property is missing for loggable property "' . $classMetadata->getName() . '::$' . $property->getName() . '"');
 					}
 
-					$structure[$associationMapping['targetEntity']][] = $newPath = array_merge([$associationMapping[$associationPropertyName]], $path);
-
-					/** @var DLA\LoggableProperty $loggablePropertyAnnotation */
-					$loggablePropertyAnnotation = $this->reader->getPropertyAnnotation($property, DLA\LoggableProperty::class);
-					if ($loggablePropertyAnnotation->logEntity) {
-						$structure = array_merge_recursive($structure, $this->getLoggableEntityAssociationStructure($associationMapping['targetEntity'], $newPath));
-					}
+					$structure[$associationMapping['targetEntity']][] = array_merge([$associationMapping[$associationPropertyName]], $path);
 				}
 			}
 		}
@@ -141,12 +133,12 @@ class ChangeSetFactory
 		return $this->associationStructure = $structure;
 	}
 
-	public function getLoggableEntityFromAssosicationStructure($associationEntity)
+	public function getLoggableEntityFromAssociationStructure($associationEntity)
 	{
 		$associationEntityClassName = ClassUtils::getClass($associationEntity);
 		foreach($this->associationStructure[$associationEntityClassName] as $propertyStructure) {
 			foreach ($propertyStructure as $propertyName) {
-				$property = new \ReflectionProperty($associationEntityClassName, $propertyName);
+				$property = new ReflectionProperty($associationEntityClassName, $propertyName);
 				$property->setAccessible(true);
 				$value = $property->getValue($associationEntity);
 
@@ -168,17 +160,20 @@ class ChangeSetFactory
 		return null;
 	}
 
+	/**
+	 * @throws ReflectionException
+	 */
 	public function isEntityLogged($entityClass)
 	{
 		if (!array_key_exists($entityClass, $this->loggableEntityClasses)) {
-			$reflection = new \ReflectionClass($entityClass);
+			$reflection = new ReflectionClass($entityClass);
 			$an = $this->reader->getClassAnnotation($reflection, DLA\LoggableEntity::class);
 			$this->loggableEntityClasses[$entityClass] = (bool) $an;
 		}
 		return $this->loggableEntityClasses[$entityClass];
 	}
 
-	public function processLoggedEntity($entity, $relatedEntity = null)
+	public function processLoggedEntity($entity, $relatedEntity = null): void
 	{
 		$changeSet = $this->getChangeSet($entity, $relatedEntity);
 		if (!$changeSet->isChanged()) {
@@ -186,10 +181,10 @@ class ChangeSetFactory
 		}
 		$logEntry = $this->getLogEntry($entity);
 		$logEntry->setChangeset($changeSet);
-		$this->em->getUnitOfWork()->computeChangeSet($this->em->getClassMetadata($logEntry::class), $logEntry);
+		$this->em->getUnitOfWork()->computeChangeSet($this->em->getClassMetadata(get_class($logEntry)), $logEntry);
 	}
 
-	public function updateIdentification($entity)
+	public function updateIdentification($entity): void
 	{
 		$oid = spl_object_hash($entity);
 		if (array_key_exists($oid, $this->identifications)) {
@@ -197,25 +192,27 @@ class ChangeSetFactory
 			$metadata = $this->em->getClassMetadata(ClassUtils::getClass($entity));
 			$id = $metadata->getIdentifierValues($entity);
 
-			/** @var CS\Id $identification */
 			$identification = $this->identifications[$oid];
 			$identification->setId(implode('-', $id));
 		}
 	}
 
 	/**
-	 * @param $entity
-	 * @return CS\ChangeSet
+	 * @param object|null $entity
+	 * @param object|null $relatedEntity
+	 * @return ChangeSet
+	 * @throws ReflectionException
 	 */
-	protected function getChangeSet($entity = NULL, $relatedEntity = null)
+	protected function getChangeSet(?object $entity =  null, ?object $relatedEntity = null)
 	{
-		if ($entity === NULL) {
-			return NULL;
+		if ($entity === null) {
+			return null;
 		}
 
 		$sploh = spl_object_hash($entity);
 		if (isset($this->computedEntityChangeSets[$sploh])) {
 			$changeSet = $this->computedEntityChangeSets[$sploh];
+
 		} else {
 			$changeSet = new CS\ChangeSet();
 			$changeSet->setIdentification($this->createIdentification($entity));
@@ -233,9 +230,7 @@ class ChangeSetFactory
 		}
 
 		$uowEntiyChangeSet = $this->uow->getEntityChangeSet($entity);
-
 		foreach ($this->getLoggedProperties(get_class($entity)) as $property) {
-
 			// property is scalar
 			$columnAnnotation = $this->reader->getPropertyAnnotation($property, Column::class);
 			if ($columnAnnotation) {
@@ -247,7 +242,6 @@ class ChangeSetFactory
 				}
 				continue;
 			}
-
 
 			// property is toOne association
 			/** @var ManyToOne $manyToOneAnnotation */
@@ -261,7 +255,6 @@ class ChangeSetFactory
 				$changeSet->addPropertyChange($nodeAssociation);
 				continue;
 			}
-
 
 			// property is toMany collection
 			/** @var ManyToOne $manyToOneAnnotation */
@@ -281,10 +274,10 @@ class ChangeSetFactory
 
 	/**
 	 * @param $entity
-	 * @param \ReflectionProperty $property
+	 * @param ReflectionProperty $property
 	 * @return CS\ToMany
 	 */
-	public function getCollectionChangeSet($entity, \ReflectionProperty $property, $relatedEntity = null)
+	public function getCollectionChangeSet($entity, ReflectionProperty $property, $relatedEntity = null): CS\ToMany
 	{
 		$nodeCollection = new CS\ToMany($property->name);
 
@@ -316,13 +309,7 @@ class ChangeSetFactory
 			$nodeCollection->addAdded($this->createIdentification($relatedEntity));
 		}
 
-		/** @var DLA\LoggableProperty $loggablePropertyAnnotation */
-		$loggablePropertyAnnotation = $this->reader->getPropertyAnnotation($property, DLA\LoggableProperty::class);
-		if ($loggablePropertyAnnotation->logEntity) {
-			foreach ($collection as $_relatedEntity) {
-				$nodeCollection->addChangeSet($this->getChangeSet($_relatedEntity));
-			}
-		} elseif ($relatedEntity) {
+		if ($relatedEntity) {
 			foreach ($collection as $_relatedEntity) {
 				if ($relatedEntity === $_relatedEntity) {
 					$nodeCollection->addChangeSet($this->getChangeSet($relatedEntity));
@@ -336,13 +323,12 @@ class ChangeSetFactory
 
 	/**
 	 * @param $entity
-	 * @param \ReflectionProperty $property
+	 * @param ReflectionProperty $property
 	 * @return CS\ToOne
+	 * @throws ReflectionException
 	 */
-	protected function getAssociationChangeSet($entity, \ReflectionProperty $property)
+	protected function getAssociationChangeSet($entity, ReflectionProperty $property)
 	{
-		/** @var DLA\LoggableProperty $loggedPropertyAnnotation */
-		$loggedPropertyAnnotation = $this->reader->getPropertyAnnotation($property, DLA\LoggableProperty::class);
 		/** @var ManyToOne $manyToOneAnnotation */
 		$manyToOneAnnotation = $this->reader->getPropertyAnnotation($property, ManyToOne::class);
 		/** @var OneToOne $oneToOneAnnotation */
@@ -390,20 +376,15 @@ class ChangeSetFactory
 			}
 		}
 
-		$toOne = new CS\ToOne($property->name, $oldIdentification, $newIdentification);
-
-		if ($loggedPropertyAnnotation->logEntity) {
-			$toOne->setChangeSet($this->getChangeSet($relatedEntity));
-		}
-
-		return $toOne;
+		return new CS\ToOne($property->name, $oldIdentification, $newIdentification);
 	}
 
 	/**
 	 * @param object|NULL $entity
 	 * @return CS\Id|NULL
+	 * @throws ReflectionException
 	 */
-	public function createIdentification($entity = NULL)
+	public function createIdentification(?object $entity = NULL): ?CS\Id
 	{
 		if ($entity === NULL) {
 			return NULL;
@@ -413,7 +394,7 @@ class ChangeSetFactory
 			$class = ClassUtils::getClass($entity);
 			$metadata = $this->em->getClassMetadata($class);
 			/** @var DLA\LoggableIdentification $identificationAnnotation */
-			$identificationAnnotation = $this->reader->getClassAnnotation(new \ReflectionClass($class), DLA\LoggableIdentification::class);
+			$identificationAnnotation = $this->reader->getClassAnnotation(new ReflectionClass($class), DLA\LoggableIdentification::class);
 			$identificationData = [];
 			if ($identificationAnnotation) {
 				foreach ($identificationAnnotation->fields as $fieldName) {
@@ -471,12 +452,12 @@ class ChangeSetFactory
 
 	/**
 	 * @param $entityClassName
-	 * @return \ReflectionProperty[]
+	 * @return ReflectionProperty[]
 	 */
 	protected function getLoggedProperties($entityClassName)
 	{
 		if (!isset($this->loggableEntityProperties[$entityClassName])) {
-			$reflection = new \ReflectionClass($entityClassName);
+			$reflection = new ReflectionClass($entityClassName);
 			$list = [];
 			foreach ($reflection->getProperties() as $property) {
 				$an = $this->reader->getPropertyAnnotation($property, DLA\LoggableProperty::class);
@@ -536,10 +517,7 @@ class ChangeSetFactory
 		return $this->logEntryClass;
 	}
 
-	/**
-	 * @param string $logEntryClass
-	 */
-	public function setLogEntryClass($logEntryClass)
+	public function setLogEntryClass(string $logEntryClass): void
 	{
 		$this->logEntryClass = $logEntryClass;
 	}
@@ -548,7 +526,7 @@ class ChangeSetFactory
 	 * @param $em
 	 * @return $this
 	 */
-	public function setEntityManager($em)
+	public function setEntityManager($em): static
 	{
 		$this->em = $em;
 		$this->uow = $this->em->getUnitOfWork();
