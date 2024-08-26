@@ -526,7 +526,7 @@ class ChangeSetFactory
 	 * @param $em
 	 * @return $this
 	 */
-	public function setEntityManager($em): static
+	public function setEntityManager($em)
 	{
 		$this->em = $em;
 		$this->uow = $this->em->getUnitOfWork();
