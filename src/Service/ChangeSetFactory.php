@@ -108,20 +108,17 @@ class ChangeSetFactory
 				$associationMapping = $classMetadata->getAssociationMapping($property->getName());
 				$associationPropertyName = '';
 				if ($associationMapping['type'] === ClassMetadataInfo::ONE_TO_ONE) {
-					// OneToOne works if entity is recreated on edit (for example files)
-					continue;
-					// TODO support of non recreating entities (for example address)
-					//$associationPropertyName = 'inversedBy';
+					$associationPropertyName = 'inversedBy';
 				}
 				elseif ($associationMapping['type'] === ClassMetadataInfo::ONE_TO_MANY){
 					$associationPropertyName = 'mappedBy';
 				}
 				if ($associationPropertyName) {
-					if (empty($associationMapping[$associationPropertyName])) {
-						throw new Exception('The "' . $associationPropertyName . '" annotation property is missing for loggable property "' . $classMetadata->getName() . '::$' . $property->getName() . '"');
+					if (!empty($associationMapping[$associationPropertyName])) {
+						$structure[$associationMapping['targetEntity']][] = array_merge([$associationMapping[$associationPropertyName]], $path);
+					} else {
+						$structure[$associationMapping['targetEntity']][] = $classMetadata->getName(). '::' . $property->getName();
 					}
-
-					$structure[$associationMapping['targetEntity']][] = array_merge([$associationMapping[$associationPropertyName]], $path);
 				}
 			}
 		}
@@ -137,23 +134,28 @@ class ChangeSetFactory
 	{
 		$associationEntityClassName = ClassUtils::getClass($associationEntity);
 		foreach($this->associationStructure[$associationEntityClassName] as $propertyStructure) {
-			foreach ($propertyStructure as $propertyName) {
-				$property = new ReflectionProperty($associationEntityClassName, $propertyName);
-				$property->setAccessible(true);
-				$value = $property->getValue($associationEntity);
+			if (is_array($propertyStructure)) {
+				foreach ($propertyStructure as $propertyName) {
+					$property = new ReflectionProperty($associationEntityClassName, $propertyName);
+					$property->setAccessible(true);
+					$value = $property->getValue($associationEntity);
 
-				// pokud neni nastavena hodnota, vime ze jsme ve spatne ceste
-				if (!$value) {
-					continue 2;
+					// pokud neni nastavena hodnota, vime ze jsme ve spatne ceste
+					if (!$value) {
+						continue 2;
+					}
+
+					// vylezli jsme o uroven vys, je potreba nastavit aktualni tridu, ve ktere se nachazime
+					$associationEntityClassName = get_class($value);
+					$associationEntity = $value;
 				}
 
-				// vylezli jsme o uroven vys, je potreba nastavit aktualni tridu, ve ktere se nachazime
-				$associationEntityClassName = get_class($value);
-				$associationEntity = $value;
-			}
-
-			if ($value) {
-				return $value;
+				if ($value) {
+					return $value;
+				}
+			} else {
+				list ($className, $propertyName) = explode('::', $propertyStructure);
+				return $this->em->getRepository($className)->findOneBy([$propertyName => $associationEntity->getId()]);
 			}
 		}
 
@@ -249,9 +251,7 @@ class ChangeSetFactory
 			/** @var OneToOne $oneToOneAnnotation */
 			$oneToOneAnnotation = $this->reader->getPropertyAnnotation($property, OneToOne::class);
 			if ($manyToOneAnnotation || $oneToOneAnnotation) {
-
 				$nodeAssociation = $this->getAssociationChangeSet($entity, $property);
-
 				$changeSet->addPropertyChange($nodeAssociation);
 				continue;
 			}
@@ -301,12 +301,12 @@ class ChangeSetFactory
 			return $nodeCollection;
 		}
 
-		foreach ($removed as $relatedEntity) {
-			$nodeCollection->addRemoved($this->createIdentification($relatedEntity));
+		foreach ($removed as $_relatedEntity) {
+			$nodeCollection->addRemoved($this->createIdentification($_relatedEntity));
 		}
 
-		foreach ($added as $relatedEntity) {
-			$nodeCollection->addAdded($this->createIdentification($relatedEntity));
+		foreach ($added as $_relatedEntity) {
+			$nodeCollection->addAdded($this->createIdentification($_relatedEntity));
 		}
 
 		if ($relatedEntity) {
@@ -329,6 +329,8 @@ class ChangeSetFactory
 	 */
 	protected function getAssociationChangeSet($entity, ReflectionProperty $property)
 	{
+		$changeSet = null;
+
 		/** @var ManyToOne $manyToOneAnnotation */
 		$manyToOneAnnotation = $this->reader->getPropertyAnnotation($property, ManyToOne::class);
 		/** @var OneToOne $oneToOneAnnotation */
@@ -339,10 +341,13 @@ class ChangeSetFactory
 
 		// owning side (ManyToOne is always owning side, OneToOne only if inversedBy is set (or nothing set - unidirectional)
 		if ($manyToOneAnnotation || ($oneToOneAnnotation && $oneToOneAnnotation->mappedBy === NULL)) {
-			$uowEntityChangeSet = $this->uow->getEntityChangeSet($entity);
-			if (isset($uowEntityChangeSet[$property->getName()])) {
-				$propertyChangeSet = $uowEntityChangeSet[$property->getName()];
-				$oldIdentification = $this->createIdentification($propertyChangeSet[0]);
+			$changeSet = $this->getChangeSet($relatedEntity);
+			if (!$changeSet->isChanged()) {
+				$uowEntityChangeSet = $this->uow->getEntityChangeSet($entity);
+				if (isset($uowEntityChangeSet[$property->getName()])) {
+					$propertyChangeSet = $uowEntityChangeSet[$property->getName()];
+					$oldIdentification = $this->createIdentification($propertyChangeSet[0]);
+				}
 			}
 
 			// inversed side - its OneToOne with mappedBy annotation
@@ -376,7 +381,9 @@ class ChangeSetFactory
 			}
 		}
 
-		return new CS\ToOne($property->name, $oldIdentification, $newIdentification);
+		$toOne = new CS\ToOne($property->name, $oldIdentification, $newIdentification);
+		$toOne->setChangeSet($changeSet);
+		return $toOne;
 	}
 
 	/**
