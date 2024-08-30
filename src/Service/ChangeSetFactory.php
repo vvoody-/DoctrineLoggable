@@ -342,7 +342,7 @@ class ChangeSetFactory
 		// owning side (ManyToOne is always owning side, OneToOne only if inversedBy is set (or nothing set - unidirectional)
 		if ($manyToOneAnnotation || ($oneToOneAnnotation && $oneToOneAnnotation->mappedBy === NULL)) {
 			$changeSet = $this->getChangeSet($relatedEntity);
-			if (!$changeSet->isChanged()) {
+			if (!$changeSet || !$changeSet->isChanged()) {
 				$uowEntityChangeSet = $this->uow->getEntityChangeSet($entity);
 				if (isset($uowEntityChangeSet[$property->getName()])) {
 					$propertyChangeSet = $uowEntityChangeSet[$property->getName()];
